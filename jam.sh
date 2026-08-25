@@ -2,22 +2,19 @@
 # jam.sh — start/stop a jam session: a stompbox session (Carla, Hydrogen,
 # SooperLooper, patchbay) plus the JamCapture web server.
 #
-#   ./jam.sh start [session]     default session: bossa
+#   ./jam.sh start [session] [youtube-url]   default session: bossa
 #   ./jam.sh stop  [session]
-#   ./jam.sh restart [session]
+#   ./jam.sh restart [session] [youtube-url]
 #   ./jam.sh status [session]
-#   ./jam.sh logs                follow the JamCapture logs
-#   ./jam.sh board [url]         open YouTube + JamCapture in the browser
+#   ./jam.sh logs                     follow the JamCapture logs
+#   ./jam.sh browser [youtube-url]    open the two tabs only
 #
 # `start` also opens YouTube and JamCapture as two Chrome tabs; put them
-# side by side with Shift+Alt+N (Chrome's split view). JAM_BOARD=0 skips
-# the browser, JAM_BOARD_MODE=board uses the local jamboard.html page
-# instead (already split, but YouTube limited to its embed player).
-# A YouTube URL (or video id) given as the last argument — or in $JAM_YT —
-# opens directly instead of the YouTube home page:
+# side by side with Shift+Alt+N — Chrome's own split view — or by
+# right-clicking a tab. JAM_OPEN=0 leaves the browser alone.
 #
 #   ./jam.sh start bossa 'https://www.youtube.com/watch?v=…'
-#   ./jam.sh board 'https://youtu.be/…'
+#   ./jam.sh browser dQw4w9WgXcQ
 #
 # stomp reads its manifest from ~/.config/stompbox/stompbox.yaml (a symlink
 # created by `stomp apply`), so this script works from any directory.
@@ -30,23 +27,18 @@ SESSION="${JAM_SESSION:-bossa}"
 JAM_UNIT="${JAM_UNIT:-jamcapture}"
 JAM_VERBOSE="${JAM_VERBOSE:-3}"
 JAM_PORT="${JAM_PORT:-8080}"
-JAM_BOARD="${JAM_BOARD:-1}"          # 0 to keep the browser out of `start`
+JAM_OPEN="${JAM_OPEN:-1}"            # 0 to keep the browser out of `start`
 JAM_BROWSER="${JAM_BROWSER:-google-chrome}"
-# split = two ordinary tabs (full youtube.com + JamCapture), split with
-#         Chrome's own split view — Shift+Alt+N, or right-click a tab
-# board = the local jamboard.html page: one window already split in two,
-#         but its left pane is the YouTube embed player, not youtube.com
-# tab   = the same page as a plain tab
-JAM_BOARD_MODE="${JAM_BOARD_MODE:-split}"
-JAM_YT="${JAM_YT:-}"                 # YouTube URL (or id) to load in the board
-BOARD_PORT="${BOARD_PORT:-8181}"     # local web server serving the board page
-BOARD_UNIT="${BOARD_UNIT:-jamboard}"
-BOARD_HTML="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jamboard.html"
+JAM_YT="${JAM_YT:-}"                 # YouTube URL (or video id) to open
 
 die() { echo "jam: $*" >&2; exit 1; }
 
 require() {
     command -v "$1" >/dev/null 2>&1 || die "'$1' not found in PATH"
+}
+
+usage() {
+    sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # JamCapture's UI needs the graphical session (system tray); systemd user
@@ -69,83 +61,20 @@ youtube_url() {
     esac
 }
 
-# Percent-encode a string for use in a query parameter (YouTube URLs carry
-# ? and & of their own). Pure bash: no python/jq needed.
-urlencode() {
-    local s="$1" out="" c i
-    for (( i = 0; i < ${#s}; i++ )); do
-        c="${s:i:1}"
-        case "$c" in
-            [a-zA-Z0-9.~_-]) out+="$c" ;;
-            *) printf -v c '%%%02X' "'$c"; out+="$c" ;;
-        esac
-    done
-    printf '%s' "$out"
-}
-
-# The board must be served over HTTP: from a file:// page the YouTube
-# player sees a null origin and refuses to play (error 153). A directory of
-# its own is served rather than the repository, on the loopback only.
-board_server() {
-    systemctl --user is-active --quiet "$BOARD_UNIT.service" && return 0
-    command -v python3 >/dev/null 2>&1 || return 1
-
-    local root="${XDG_RUNTIME_DIR:-/tmp}/jamboard"
-    mkdir -p "$root"
-    ln -sf "$BOARD_HTML" "$root/jamboard.html"
-
-    systemd-run --user --collect --quiet \
-        --unit="$BOARD_UNIT" \
-        --description="Jam board page server" \
-        python3 -m http.server "$BOARD_PORT" --bind 127.0.0.1 --directory "$root" \
-        >/dev/null || return 1
-
-    # Give the server a moment to bind before Chrome asks for the page.
-    local i
-    for i in 1 2 3 4 5 6 7 8 9 10; do
-        curl -sf -o /dev/null "http://127.0.0.1:$BOARD_PORT/jamboard.html" && return 0
-        sleep 0.3
-    done
-    return 1
-}
-
-# GNOME under Wayland ignores --window-position (mutter places windows
-# itself), so a scripted two-window split is not possible. The board is a
-# local page splitting one Chrome window between the YouTube player and the
-# JamCapture UI instead; drag the divider to resize.
-board() {
-    [ -f "$BOARD_HTML" ] || die "board page not found: $BOARD_HTML"
+# Two ordinary tabs in one window. Chrome splits them itself (Shift+Alt+N);
+# nothing here can trigger that split — there is no command-line switch for
+# it, and Wayland rules out sending the shortcut.
+browser() {
     command -v "$JAM_BROWSER" >/dev/null 2>&1 || {
-        echo "jam: '$JAM_BROWSER' not found, skipping the board" >&2
+        echo "jam: '$JAM_BROWSER' not found, not opening the browser" >&2
         return 0
     }
+    local yt="https://www.youtube.com/"
+    [ -n "$JAM_YT" ] && yt="$(youtube_url "$JAM_YT")"
 
-    if [ "$JAM_BOARD_MODE" = "split" ]; then
-        local yt="https://www.youtube.com/"
-        [ -n "$JAM_YT" ] && yt="$(youtube_url "$JAM_YT")"
-        echo "jam: opening YouTube and JamCapture…"
-        echo "     Shift+Alt+N (or right-click a tab → split view) to put them side by side"
-        "$JAM_BROWSER" --new-window "$yt" "http://localhost:$JAM_PORT" >/dev/null 2>&1 &
-        disown
-        return 0
-    fi
-
-    local url
-    if board_server; then
-        url="http://localhost:$BOARD_PORT/jamboard.html?jam=http://localhost:$JAM_PORT"
-    else
-        echo "jam: no local server for the board, falling back to file:// (YouTube will refuse to play)" >&2
-        url="file://$BOARD_HTML?jam=http://localhost:$JAM_PORT"
-    fi
-    [ -n "$JAM_YT" ] && url="$url&yt=$(urlencode "$JAM_YT")"
-
-    echo "jam: opening the board…"
-    if [ "$JAM_BOARD_MODE" = "tab" ]; then
-        "$JAM_BROWSER" "$url" >/dev/null 2>&1 &
-    else
-        # --app drops the tab strip and address bar; the window is ours alone.
-        "$JAM_BROWSER" --app="$url" --start-maximized >/dev/null 2>&1 &
-    fi
+    echo "jam: opening YouTube and JamCapture…"
+    echo "     Shift+Alt+N (or right-click a tab → split view) to put them side by side"
+    "$JAM_BROWSER" --new-window "$yt" "http://localhost:$JAM_PORT" >/dev/null 2>&1 &
     disown
 }
 
@@ -173,18 +102,13 @@ start() {
             "$jamcapture_bin" serve -v"$JAM_VERBOSE" --port "$JAM_PORT" >/dev/null
     fi
 
-    [ "$JAM_BOARD" = "1" ] && board
+    [ "$JAM_OPEN" = "1" ] && browser
 
     status
 }
 
 stop() {
     require stomp
-
-    if systemctl --user is-active --quiet "$BOARD_UNIT.service"; then
-        echo "jam: stopping the board server…"
-        systemctl --user stop "$BOARD_UNIT.service"
-    fi
 
     if jam_active; then
         echo "jam: stopping JamCapture…"
@@ -202,8 +126,6 @@ status() {
     echo
     printf '%-28s %s\n' "$JAM_UNIT.service" \
         "$(systemctl --user is-active "$JAM_UNIT.service" 2>/dev/null || true)"
-    printf '%-28s %s\n' "$BOARD_UNIT.service" \
-        "$(systemctl --user is-active "$BOARD_UNIT.service" 2>/dev/null || true)"
     if jam_active; then
         # JamCapture logs its LAN URL at startup — the one to open on a phone.
         journalctl --user -u "$JAM_UNIT.service" --since "-1day" --no-pager 2>/dev/null \
@@ -220,8 +142,8 @@ cmd="${1:-}"
 [ $# -gt 0 ] && shift || true
 
 case "$cmd" in
-    board)
-        # board takes the YouTube URL directly: jam board <url>
+    browser)
+        # browser takes the YouTube URL directly: jam browser <url>
         [ $# -gt 0 ] && JAM_YT="$1"
         ;;
     *)
@@ -237,9 +159,7 @@ case "$cmd" in
     restart) stop; start ;;
     status)  status ;;
     logs)    logs ;;
-    board)   board ;;
-    ""|-h|--help|help)
-        sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
-        ;;
-    *) die "unknown command '$cmd' (start|stop|restart|status|logs|board)" ;;
+    browser) browser ;;
+    ""|-h|--help|help) usage ;;
+    *) die "unknown command '$cmd' (start|stop|restart|status|logs|browser)" ;;
 esac
