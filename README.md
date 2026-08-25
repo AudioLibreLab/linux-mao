@@ -18,6 +18,10 @@ YouTube à gauche, JamCapture à droite, séparateur déplaçable à la souris
 les fenêtres, le split se fait dans une seule fenêtre plutôt qu'avec deux.
 `JAM_BOARD=0` pour ne pas l'ouvrir.
 
+La page est servie par un petit serveur local (`jamboard.service`, sur
+127.0.0.1:8181) : depuis une page `file://`, le lecteur YouTube voit une
+origine nulle et refuse de jouer (erreur 153).
+
 Les deux outils lisent leur configuration dans `~/.config`
 (`~/.config/stompbox/stompbox.yaml`, lien créé par `stomp apply`, et
 `~/.config/jamcapture.yaml`), donc le script marche depuis n'importe où.

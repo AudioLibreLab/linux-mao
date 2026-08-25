@@ -30,6 +30,8 @@ JAM_PORT="${JAM_PORT:-8080}"
 JAM_BOARD="${JAM_BOARD:-1}"          # 0 to keep the browser out of `start`
 JAM_BROWSER="${JAM_BROWSER:-google-chrome}"
 JAM_YT="${JAM_YT:-}"                 # YouTube URL (or id) to load in the board
+BOARD_PORT="${BOARD_PORT:-8181}"     # local web server serving the board page
+BOARD_UNIT="${BOARD_UNIT:-jamboard}"
 BOARD_HTML="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jamboard.html"
 
 die() { echo "jam: $*" >&2; exit 1; }
@@ -64,6 +66,32 @@ urlencode() {
     printf '%s' "$out"
 }
 
+# The board must be served over HTTP: from a file:// page the YouTube
+# player sees a null origin and refuses to play (error 153). A directory of
+# its own is served rather than the repository, on the loopback only.
+board_server() {
+    systemctl --user is-active --quiet "$BOARD_UNIT.service" && return 0
+    command -v python3 >/dev/null 2>&1 || return 1
+
+    local root="${XDG_RUNTIME_DIR:-/tmp}/jamboard"
+    mkdir -p "$root"
+    ln -sf "$BOARD_HTML" "$root/jamboard.html"
+
+    systemd-run --user --collect --quiet \
+        --unit="$BOARD_UNIT" \
+        --description="Jam board page server" \
+        python3 -m http.server "$BOARD_PORT" --bind 127.0.0.1 --directory "$root" \
+        >/dev/null || return 1
+
+    # Give the server a moment to bind before Chrome asks for the page.
+    local i
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        curl -sf -o /dev/null "http://127.0.0.1:$BOARD_PORT/jamboard.html" && return 0
+        sleep 0.3
+    done
+    return 1
+}
+
 # GNOME under Wayland ignores --window-position (mutter places windows
 # itself), so a scripted two-window split is not possible. The board is a
 # local page splitting one Chrome window between the YouTube player and the
@@ -74,8 +102,16 @@ board() {
         echo "jam: '$JAM_BROWSER' not found, skipping the board" >&2
         return 0
     }
-    local url="file://$BOARD_HTML?jam=http://localhost:$JAM_PORT"
+
+    local url
+    if board_server; then
+        url="http://localhost:$BOARD_PORT/jamboard.html?jam=http://localhost:$JAM_PORT"
+    else
+        echo "jam: no local server for the board, falling back to file:// (YouTube will refuse to play)" >&2
+        url="file://$BOARD_HTML?jam=http://localhost:$JAM_PORT"
+    fi
     [ -n "$JAM_YT" ] && url="$url&yt=$(urlencode "$JAM_YT")"
+
     echo "jam: opening the board…"
     # --app drops the tab strip and address bar; the window is ours alone.
     "$JAM_BROWSER" --app="$url" --start-maximized >/dev/null 2>&1 &
@@ -99,7 +135,7 @@ start() {
         echo "jam: starting JamCapture (-v$JAM_VERBOSE)…"
         # --collect drops the transient unit once it exits, so a later
         # start does not trip over a failed leftover.
-        systemd-run --user --collect \
+        systemd-run --user --collect --quiet \
             --unit="$JAM_UNIT" \
             --description="JamCapture web server" \
             --working-directory="$HOME" \
@@ -113,6 +149,11 @@ start() {
 
 stop() {
     require stomp
+
+    if systemctl --user is-active --quiet "$BOARD_UNIT.service"; then
+        echo "jam: stopping the board server…"
+        systemctl --user stop "$BOARD_UNIT.service"
+    fi
 
     if jam_active; then
         echo "jam: stopping JamCapture…"
@@ -130,6 +171,8 @@ status() {
     echo
     printf '%-28s %s\n' "$JAM_UNIT.service" \
         "$(systemctl --user is-active "$JAM_UNIT.service" 2>/dev/null || true)"
+    printf '%-28s %s\n' "$BOARD_UNIT.service" \
+        "$(systemctl --user is-active "$BOARD_UNIT.service" 2>/dev/null || true)"
     if jam_active; then
         # JamCapture logs its LAN URL at startup — the one to open on a phone.
         journalctl --user -u "$JAM_UNIT.service" --since "-1day" --no-pager 2>/dev/null \
