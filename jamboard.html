@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jam board</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1c1f26;
+    --border: #2c313b;
+    --text: #e7e9ee;
+    --muted: #97a0b0;
+    --accent: #e8663c;
+    --left: 50%;
+  }
+  * { box-sizing: border-box; }
+  /* display: on the rules below would otherwise beat the hidden attribute */
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Cantarell, sans-serif;
+    display: grid;
+    grid-template-columns: var(--left) 8px 1fr;
+    overflow: hidden;
+  }
+  .pane { display: flex; flex-direction: column; min-width: 0; }
+  .bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .bar h1 {
+    margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted); white-space: nowrap;
+  }
+  input[type=text] {
+    flex: 1; min-width: 0;
+    padding: 6px 9px;
+    background: #101216; color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    font: inherit;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--accent); }
+  button {
+    padding: 6px 10px;
+    background: #262b35; color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    font: inherit; cursor: pointer; white-space: nowrap;
+  }
+  button:hover { background: #313846; }
+  button.accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.accent:hover { filter: brightness(1.1); }
+  iframe { flex: 1; width: 100%; border: 0; background: #000; }
+  #split { background: var(--border); cursor: col-resize; }
+  #split:hover, #split.dragging { background: var(--accent); }
+  .empty {
+    flex: 1; display: grid; place-content: center; gap: 6px;
+    text-align: center; color: var(--muted); padding: 20px;
+  }
+  .empty code { color: var(--text); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<section class="pane">
+  <div class="bar">
+    <h1>YouTube</h1>
+    <input type="text" id="url" placeholder="Coller une URL YouTube (vidéo, playlist, short)…" spellcheck="false">
+    <button class="accent" id="load">Charger</button>
+    <button id="open" title="Ouvrir youtube.com dans un onglet pour chercher">Chercher ↗</button>
+  </div>
+  <div class="empty" id="placeholder">
+    <div>Colle une URL YouTube pour la jouer ici.</div>
+    <code>watch?v=… · youtu.be/… · playlist?list=… · /shorts/…</code>
+  </div>
+  <iframe id="yt" hidden allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+</section>
+
+<div id="split" title="Glisser pour redimensionner"></div>
+
+<section class="pane">
+  <div class="bar">
+    <h1>JamCapture</h1>
+    <button data-path="/">Enregistrer</button>
+    <button data-path="/mix">Mix</button>
+    <button data-path="/config">Config</button>
+    <span style="flex:1"></span>
+    <button id="reload" title="Recharger le panneau">↻</button>
+  </div>
+  <iframe id="jam" allow="microphone; autoplay"></iframe>
+</section>
+
+<script>
+(function () {
+  "use strict";
+
+  // localStorage is unavailable in some contexts (file:// with site data
+  // blocked); the board must still work without it.
+  var store = {
+    get: function (k, dflt) { try { return localStorage.getItem(k) || dflt; } catch (e) { return dflt; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  var params = new URLSearchParams(location.search);
+  var jamBase = (params.get("jam") || "http://localhost:8080").replace(/\/+$/, "");
+
+  /* ---------- JamCapture pane ---------- */
+  var jam = document.getElementById("jam");
+  function jamGo(path) { jam.src = jamBase + path; }
+  jamGo("/");
+  document.querySelectorAll("[data-path]").forEach(function (b) {
+    b.addEventListener("click", function () { jamGo(b.dataset.path); });
+  });
+  document.getElementById("reload").addEventListener("click", function () {
+    jam.src = jam.src; // eslint-disable-line no-self-assign
+  });
+
+  /* ---------- YouTube pane ---------- */
+  var yt = document.getElementById("yt");
+  var placeholder = document.getElementById("placeholder");
+  var input = document.getElementById("url");
+
+  // Turn any YouTube URL into its embeddable form; youtube.com itself
+  // refuses to be framed, only /embed/ does.
+  function embedURL(raw) {
+    var s = (raw || "").trim();
+    if (!s) return null;
+    if (/^[\w-]{11}$/.test(s)) return "https://www.youtube.com/embed/" + s;
+    var u;
+    try { u = new URL(s.indexOf("http") === 0 ? s : "https://" + s); } catch (e) { return null; }
+    if (!/(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(u.hostname)) return null;
+
+    var id = null, list = u.searchParams.get("list"), start = u.searchParams.get("t");
+    if (u.hostname.indexOf("youtu.be") !== -1) id = u.pathname.slice(1);
+    else if (u.pathname === "/watch") id = u.searchParams.get("v");
+    else if (u.pathname.indexOf("/shorts/") === 0) id = u.pathname.split("/")[2];
+    else if (u.pathname.indexOf("/embed/") === 0) id = u.pathname.split("/")[2];
+
+    var base;
+    if (id) base = "https://www.youtube.com/embed/" + id;
+    else if (list) base = "https://www.youtube.com/embed/videoseries";
+    else return null;
+
+    var q = [];
+    if (list) q.push("list=" + encodeURIComponent(list));
+    if (start) q.push("start=" + parseInt(start, 10));
+    return base + (q.length ? "?" + q.join("&") : "");
+  }
+
+  function play(raw) {
+    var src = embedURL(raw);
+    if (!src) { input.style.borderColor = "#c0392b"; return; }
+    input.style.borderColor = "";
+    yt.src = src;
+    yt.hidden = false;
+    placeholder.hidden = true;
+    store.set("jamboard.url", raw.trim());
+  }
+
+  document.getElementById("load").addEventListener("click", function () { play(input.value); });
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") play(input.value); });
+  document.getElementById("open").addEventListener("click", function () {
+    window.open("https://www.youtube.com/", "_blank", "noopener");
+  });
+
+  // ?yt=… (passed by jam.sh) wins over the last URL played here.
+  var initial = params.get("yt") || store.get("jamboard.url", "");
+  if (initial) { input.value = initial; play(initial); }
+
+  /* ---------- draggable split ---------- */
+  var split = document.getElementById("split");
+  var width = store.get("jamboard.split", "50%");
+  document.documentElement.style.setProperty("--left", width);
+
+  // Pointer events with capture: the divider keeps receiving moves even when
+  // the cursor travels over an iframe, which swallows plain mouse events.
+  split.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    split.setPointerCapture(e.pointerId);
+    split.classList.add("dragging");
+    document.querySelectorAll("iframe").forEach(function (f) { f.style.pointerEvents = "none"; });
+  });
+
+  split.addEventListener("pointermove", function (e) {
+    if (split.classList.contains("dragging")) setLeft(e.clientX);
+  });
+
+  function setLeft(clientX) {
+    var pct = Math.min(85, Math.max(15, (clientX / window.innerWidth) * 100));
+    document.documentElement.style.setProperty("--left", pct.toFixed(2) + "%");
+  }
+
+  function endDrag(e) {
+    if (!split.classList.contains("dragging")) return;
+    // Apply the release position too: a fast drag can end without a single
+    // pointermove in between.
+    if (e && typeof e.clientX === "number" && e.clientX > 0) setLeft(e.clientX);
+    split.classList.remove("dragging");
+    if (e && e.pointerId !== undefined && split.hasPointerCapture(e.pointerId)) {
+      split.releasePointerCapture(e.pointerId);
+    }
+    document.querySelectorAll("iframe").forEach(function (f) { f.style.pointerEvents = ""; });
+    store.set("jamboard.split", getComputedStyle(document.documentElement).getPropertyValue("--left").trim());
+  }
+  split.addEventListener("pointerup", endDrag);
+  split.addEventListener("pointercancel", endDrag);
+  split.addEventListener("lostpointercapture", endDrag);
+
+  split.addEventListener("dblclick", function () {
+    document.documentElement.style.setProperty("--left", "50%");
+    store.set("jamboard.split", "50%");
+  });
+})();
+</script>
+</body>
+</html>

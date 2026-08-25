@@ -4,12 +4,19 @@
 SooperLooper, patchbay) et le serveur web JamCapture (`serve -v3`).
 
 ```shell
-./jam.sh start [session]   # défaut: bossa
+./jam.sh start [session] [url-youtube]   # défaut: bossa
 ./jam.sh stop [session]
-./jam.sh restart [session]
+./jam.sh restart [session] [url-youtube]
 ./jam.sh status [session]  # état des unités + URL du serveur JamCapture
 ./jam.sh logs              # journal de JamCapture
+./jam.sh board [url-youtube]   # la fenêtre splittée seule
 ```
+
+`start` ouvre aussi `jamboard.html` dans une fenêtre Chrome : lecteur
+YouTube à gauche, JamCapture à droite, séparateur déplaçable à la souris
+(double-clic pour revenir à 50/50). GNOME sous Wayland refusant de placer
+les fenêtres, le split se fait dans une seule fenêtre plutôt qu'avec deux.
+`JAM_BOARD=0` pour ne pas l'ouvrir.
 
 Les deux outils lisent leur configuration dans `~/.config`
 (`~/.config/stompbox/stompbox.yaml`, lien créé par `stomp apply`, et
