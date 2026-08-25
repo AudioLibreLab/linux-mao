@@ -1,3 +1,20 @@
+# Jam session
+
+`./jam.sh start` lance la session stompbox `bossa` (Carla, Hydrogen,
+SooperLooper, patchbay) et le serveur web JamCapture (`serve -v3`).
+
+```shell
+./jam.sh start [session]   # défaut: bossa
+./jam.sh stop [session]
+./jam.sh restart [session]
+./jam.sh status [session]  # état des unités + URL du serveur JamCapture
+./jam.sh logs              # journal de JamCapture
+```
+
+Les deux outils lisent leur configuration dans `~/.config`
+(`~/.config/stompbox/stompbox.yaml`, lien créé par `stomp apply`, et
+`~/.config/jamcapture.yaml`), donc le script marche depuis n'importe où.
+
 
 # Add audio user to audio group and restart the computer
 sudo adduser $USER audio
