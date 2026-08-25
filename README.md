@@ -12,14 +12,17 @@ SooperLooper, patchbay) et le serveur web JamCapture (`serve -v3`).
 ./jam.sh board [url-youtube]   # la fenêtre splittée seule
 ```
 
-`start` ouvre aussi `jamboard.html` dans une fenêtre Chrome : lecteur
-YouTube à gauche, JamCapture à droite, séparateur déplaçable à la souris
-(double-clic pour revenir à 50/50). GNOME sous Wayland refusant de placer
-les fenêtres, le split se fait dans une seule fenêtre plutôt qu'avec deux.
-`JAM_BOARD=0` pour ne pas l'ouvrir.
+`start` ouvre aussi YouTube et JamCapture dans deux onglets Chrome ;
+**Shift+Alt+N** (ou clic droit sur un onglet → vue partagée) les met côte
+à côte avec le split natif de Chrome. `JAM_BOARD=0` n'ouvre pas le
+navigateur.
 
-La page est servie par un petit serveur local (`jamboard.service`, sur
-127.0.0.1:8181) : depuis une page `file://`, le lecteur YouTube voit une
+`JAM_BOARD_MODE=board` utilise à la place `jamboard.html`, une page locale
+déjà splittée (séparateur déplaçable, double-clic pour 50/50) : aucun
+geste à faire, mais le panneau gauche est le lecteur *embed* de YouTube,
+donc sans recherche ni compte connecté, et certaines vidéos y sont
+interdites. Elle est servie par un serveur local (`jamboard.service`,
+127.0.0.1:8181) car depuis une page `file://` le lecteur YouTube voit une
 origine nulle et refuse de jouer (erreur 153).
 
 Les deux outils lisent leur configuration dans `~/.config`

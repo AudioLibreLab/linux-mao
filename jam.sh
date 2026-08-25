@@ -7,12 +7,14 @@
 #   ./jam.sh restart [session]
 #   ./jam.sh status [session]
 #   ./jam.sh logs                follow the JamCapture logs
-#   ./jam.sh board [url]         open the split YouTube / JamCapture board
+#   ./jam.sh board [url]         open YouTube + JamCapture in the browser
 #
-# `start` also opens the board in Chrome; set JAM_BOARD=0 to skip it, or
-# JAM_BOARD_MODE=tab for a plain browser tab instead of its own window.
+# `start` also opens YouTube and JamCapture as two Chrome tabs; put them
+# side by side with Shift+Alt+N (Chrome's split view). JAM_BOARD=0 skips
+# the browser, JAM_BOARD_MODE=board uses the local jamboard.html page
+# instead (already split, but YouTube limited to its embed player).
 # A YouTube URL (or video id) given as the last argument — or in $JAM_YT —
-# is loaded in the board's left pane:
+# opens directly instead of the YouTube home page:
 #
 #   ./jam.sh start bossa 'https://www.youtube.com/watch?v=…'
 #   ./jam.sh board 'https://youtu.be/…'
@@ -30,9 +32,12 @@ JAM_VERBOSE="${JAM_VERBOSE:-3}"
 JAM_PORT="${JAM_PORT:-8080}"
 JAM_BOARD="${JAM_BOARD:-1}"          # 0 to keep the browser out of `start`
 JAM_BROWSER="${JAM_BROWSER:-google-chrome}"
-# app  = own window, no tab strip nor address bar (more room for the panes)
-# tab  = a plain tab in the running browser
-JAM_BOARD_MODE="${JAM_BOARD_MODE:-app}"
+# split = two ordinary tabs (full youtube.com + JamCapture), split with
+#         Chrome's own split view — Shift+Alt+N, or right-click a tab
+# board = the local jamboard.html page: one window already split in two,
+#         but its left pane is the YouTube embed player, not youtube.com
+# tab   = the same page as a plain tab
+JAM_BOARD_MODE="${JAM_BOARD_MODE:-split}"
 JAM_YT="${JAM_YT:-}"                 # YouTube URL (or id) to load in the board
 BOARD_PORT="${BOARD_PORT:-8181}"     # local web server serving the board page
 BOARD_UNIT="${BOARD_UNIT:-jamboard}"
@@ -54,6 +59,14 @@ import_graphical_env() {
 
 jam_active() {
     systemctl --user is-active --quiet "$JAM_UNIT.service"
+}
+
+# Turn a bare video id into a watch URL; anything else is passed through.
+youtube_url() {
+    case "$1" in
+        http://*|https://*) printf '%s' "$1" ;;
+        *) printf 'https://www.youtube.com/watch?v=%s' "$1" ;;
+    esac
 }
 
 # Percent-encode a string for use in a query parameter (YouTube URLs carry
@@ -106,6 +119,16 @@ board() {
         echo "jam: '$JAM_BROWSER' not found, skipping the board" >&2
         return 0
     }
+
+    if [ "$JAM_BOARD_MODE" = "split" ]; then
+        local yt="https://www.youtube.com/"
+        [ -n "$JAM_YT" ] && yt="$(youtube_url "$JAM_YT")"
+        echo "jam: opening YouTube and JamCapture…"
+        echo "     Shift+Alt+N (or right-click a tab → split view) to put them side by side"
+        "$JAM_BROWSER" --new-window "$yt" "http://localhost:$JAM_PORT" >/dev/null 2>&1 &
+        disown
+        return 0
+    fi
 
     local url
     if board_server; then
@@ -216,7 +239,7 @@ case "$cmd" in
     logs)    logs ;;
     board)   board ;;
     ""|-h|--help|help)
-        sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
         ;;
     *) die "unknown command '$cmd' (start|stop|restart|status|logs|board)" ;;
 esac
