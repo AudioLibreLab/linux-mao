@@ -9,7 +9,8 @@
 #   ./jam.sh logs                follow the JamCapture logs
 #   ./jam.sh board [url]         open the split YouTube / JamCapture board
 #
-# `start` also opens the board in Chrome; set JAM_BOARD=0 to skip it.
+# `start` also opens the board in Chrome; set JAM_BOARD=0 to skip it, or
+# JAM_BOARD_MODE=tab for a plain browser tab instead of its own window.
 # A YouTube URL (or video id) given as the last argument — or in $JAM_YT —
 # is loaded in the board's left pane:
 #
@@ -29,6 +30,9 @@ JAM_VERBOSE="${JAM_VERBOSE:-3}"
 JAM_PORT="${JAM_PORT:-8080}"
 JAM_BOARD="${JAM_BOARD:-1}"          # 0 to keep the browser out of `start`
 JAM_BROWSER="${JAM_BROWSER:-google-chrome}"
+# app  = own window, no tab strip nor address bar (more room for the panes)
+# tab  = a plain tab in the running browser
+JAM_BOARD_MODE="${JAM_BOARD_MODE:-app}"
 JAM_YT="${JAM_YT:-}"                 # YouTube URL (or id) to load in the board
 BOARD_PORT="${BOARD_PORT:-8181}"     # local web server serving the board page
 BOARD_UNIT="${BOARD_UNIT:-jamboard}"
@@ -113,8 +117,12 @@ board() {
     [ -n "$JAM_YT" ] && url="$url&yt=$(urlencode "$JAM_YT")"
 
     echo "jam: opening the board…"
-    # --app drops the tab strip and address bar; the window is ours alone.
-    "$JAM_BROWSER" --app="$url" --start-maximized >/dev/null 2>&1 &
+    if [ "$JAM_BOARD_MODE" = "tab" ]; then
+        "$JAM_BROWSER" "$url" >/dev/null 2>&1 &
+    else
+        # --app drops the tab strip and address bar; the window is ours alone.
+        "$JAM_BROWSER" --app="$url" --start-maximized >/dev/null 2>&1 &
+    fi
     disown
 }
 
@@ -208,7 +216,7 @@ case "$cmd" in
     logs)    logs ;;
     board)   board ;;
     ""|-h|--help|help)
-        sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
         ;;
     *) die "unknown command '$cmd' (start|stop|restart|status|logs|board)" ;;
 esac
