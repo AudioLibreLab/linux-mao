@@ -9,9 +9,11 @@
 #   ./jam.sh logs                     follow the JamCapture logs
 #   ./jam.sh browser [youtube-url]    open the two tabs only
 #
-# `start` also opens YouTube and JamCapture as two Chrome tabs; put them
-# side by side with Shift+Alt+N — Chrome's own split view — or by
-# right-clicking a tab. JAM_OPEN=0 leaves the browser alone.
+# `start` also opens YouTube, JamCapture, Groove Scribe (drum pattern) and
+# an online metronome as Chrome tabs; put two of them side by side with
+# Shift+Alt+N — Chrome's own split view — or by right-clicking a tab.
+# JAM_OPEN=0 leaves the browser alone; JAM_GROOVE / JAM_METRONOME override
+# the default groove and metronome URLs.
 #
 #   ./jam.sh start bossa 'https://www.youtube.com/watch?v=…'
 #   ./jam.sh browser dQw4w9WgXcQ
@@ -30,6 +32,9 @@ JAM_PORT="${JAM_PORT:-8080}"
 JAM_OPEN="${JAM_OPEN:-1}"            # 0 to keep the browser out of `start`
 JAM_BROWSER="${JAM_BROWSER:-google-chrome}"
 JAM_YT="${JAM_YT:-}"                 # YouTube URL (or video id) to open
+# Groove Scribe: 4/4, 16th notes, 80 bpm, basic rock beat (hi-hat, snare on 2 & 4, kick on 1 & 3).
+JAM_GROOVE="${JAM_GROOVE:-https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=16&Tempo=80&Measures=1&H=|xxxxxxxxxxxxxxxx|&S=|----O-------O---|&K=|o-------o-------|}"
+JAM_METRONOME="${JAM_METRONOME:-https://www.metronome-en-ligne.com/}"
 
 die() { echo "jam: $*" >&2; exit 1; }
 
@@ -61,7 +66,7 @@ youtube_url() {
     esac
 }
 
-# Two ordinary tabs in one window. Chrome splits them itself (Shift+Alt+N);
+# Ordinary tabs in one window. Chrome splits them itself (Shift+Alt+N);
 # nothing here can trigger that split — there is no command-line switch for
 # it, and Wayland rules out sending the shortcut.
 browser() {
@@ -72,9 +77,10 @@ browser() {
     local yt="https://www.youtube.com/"
     [ -n "$JAM_YT" ] && yt="$(youtube_url "$JAM_YT")"
 
-    echo "jam: opening YouTube and JamCapture…"
-    echo "     Shift+Alt+N (or right-click a tab → split view) to put them side by side"
-    "$JAM_BROWSER" --new-window "$yt" "http://localhost:$JAM_PORT" >/dev/null 2>&1 &
+    echo "jam: opening YouTube, JamCapture, Groove Scribe and the metronome…"
+    echo "     Shift+Alt+N (or right-click a tab → split view) to put two tabs side by side"
+    "$JAM_BROWSER" --new-window "$yt" "http://localhost:$JAM_PORT" \
+        "$JAM_GROOVE" "$JAM_METRONOME" >/dev/null 2>&1 &
     disown
 }
 
