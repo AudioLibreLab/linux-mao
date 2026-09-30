@@ -5,9 +5,9 @@ SooperLooper, patchbay) et le serveur web JamCapture (`serve -v3`).
 
 ```shell
 ./jam.sh start [session] [url-youtube]   # défaut: bossa
-./jam.sh stop [session]
+./jam.sh stop [session]    # défaut: la ou les sessions en cours
 ./jam.sh restart [session] [url-youtube]
-./jam.sh status [session]  # état des unités + URL du serveur JamCapture
+./jam.sh status [session]  # défaut: sessions en cours (rien si aucune); état des unités + URL du serveur JamCapture
 ./jam.sh logs              # journal de JamCapture
 ./jam.sh browser [url-youtube]   # les deux onglets seuls
 ```

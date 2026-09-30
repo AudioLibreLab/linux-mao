@@ -3,9 +3,9 @@
 # SooperLooper, patchbay) plus the JamCapture web server.
 #
 #   ./jam.sh start [session] [youtube-url]   default session: bossa
-#   ./jam.sh stop  [session]
+#   ./jam.sh stop  [session]          default: the running session(s)
 #   ./jam.sh restart [session] [youtube-url]
-#   ./jam.sh status [session]
+#   ./jam.sh status [session]         default: the running session(s), silent if none
 #   ./jam.sh logs                     follow the JamCapture logs
 #   ./jam.sh browser [youtube-url]    open the two tabs only
 #
@@ -26,6 +26,8 @@
 set -euo pipefail
 
 SESSION="${JAM_SESSION:-bossa}"
+SESSION_SET=0                        # 1 once a session is named explicitly
+[ -n "${JAM_SESSION:-}" ] && SESSION_SET=1
 JAM_UNIT="${JAM_UNIT:-jamcapture}"
 JAM_VERBOSE="${JAM_VERBOSE:-3}"
 JAM_PORT="${JAM_PORT:-8080}"
@@ -56,6 +58,25 @@ import_graphical_env() {
 
 jam_active() {
     systemctl --user is-active --quiet "$JAM_UNIT.service"
+}
+
+# Sessions with anything running: the target or one of its instances in a
+# state other than inactive/failed.
+active_sessions() {
+    stomp status 2>/dev/null | awk '
+        /^[^ ]/ { sub(/\.target$/, "", $1); s = $1 }
+        $NF != "inactive" && $NF != "failed" && !seen[s]++ { print s }'
+}
+
+# Without an explicit session, act on the running one(s); fall back to the
+# default session when nothing is running, unless called with "nofallback".
+resolve_sessions() {
+    if [ "$SESSION_SET" = "1" ]; then
+        SESSIONS=("$SESSION")
+        return
+    fi
+    mapfile -t SESSIONS < <(active_sessions)
+    [ ${#SESSIONS[@]} -gt 0 ] || [ "${1:-}" = "nofallback" ] || SESSIONS=("$SESSION")
 }
 
 # Turn a bare video id into a watch URL; anything else is passed through.
@@ -121,14 +142,22 @@ stop() {
         systemctl --user stop "$JAM_UNIT.service"
     fi
 
-    echo "jam: stopping stompbox session '$SESSION'…"
-    stomp off "$SESSION"
+    local s
+    for s in "${SESSIONS[@]}"; do
+        echo "jam: stopping stompbox session '$s'…"
+        stomp off "$s"
+    done
 }
 
 status() {
+    # Nothing running and nothing asked for: nothing to show.
+    [ ${#SESSIONS[@]} -gt 0 ] || jam_active || return 0
     echo
-    # Keep only the requested session's block (target line + its instances).
-    stomp status | awk -v s="$SESSION.target" '$1 == s {p=1; print; next} /^[^ ]/ {p=0} p' || true
+    # Keep only the requested sessions' blocks (target line + its instances).
+    stomp status | awk -v list="${SESSIONS[*]}" '
+        BEGIN { n = split(list, a, " "); for (i = 1; i <= n; i++) want[a[i] ".target"] = 1 }
+        /^[^ ]/ { p = ($1 in want) }
+        p' || true
     echo
     printf '%-28s %s\n' "$JAM_UNIT.service" \
         "$(systemctl --user is-active "$JAM_UNIT.service" 2>/dev/null || true)"
@@ -154,16 +183,20 @@ case "$cmd" in
         ;;
     *)
         # everything else: jam <cmd> [session] [youtube-url]
-        [ $# -gt 0 ] && SESSION="$1"
+        [ $# -gt 0 ] && { SESSION="$1"; SESSION_SET=1; }
         [ $# -gt 1 ] && JAM_YT="$2"
         ;;
 esac
 
 case "$cmd" in
-    start)   start ;;
-    stop)    stop ;;
-    restart) stop; start ;;
-    status)  status ;;
+    start)   SESSIONS=("$SESSION"); start ;;
+    stop)    resolve_sessions; stop ;;
+    restart)
+        resolve_sessions
+        [ ${#SESSIONS[@]} -eq 1 ] || die "several sessions running (${SESSIONS[*]}), name the one to restart"
+        SESSION="${SESSIONS[0]}"
+        stop; start ;;
+    status)  resolve_sessions nofallback; status ;;
     logs)    logs ;;
     browser) browser ;;
     ""|-h|--help|help) usage ;;
