@@ -1,10 +1,12 @@
 # Jam session
 
-`./jam.sh start` lance la session stompbox `bossa` (Carla, Hydrogen,
-SooperLooper, patchbay) et le serveur web JamCapture (`serve -v3`).
+`./jam.sh start` lance la session stompbox `multifx` (Carla en passthrough
+pour le multi-effet matériel, patchbay) et le serveur web JamCapture
+(`serve -v3`). Les sessions `bossa`, `blues` et `nylon` ajoutent Hydrogen et
+SooperLooper.
 
 ```shell
-./jam.sh start [session] [url-youtube]   # défaut: bossa
+./jam.sh start [session] [url-youtube]   # défaut: multifx
 ./jam.sh stop [session]    # défaut: la ou les sessions en cours
 ./jam.sh restart [session] [url-youtube]
 ./jam.sh status [session]  # défaut: sessions en cours (rien si aucune); état des unités + URL du serveur JamCapture

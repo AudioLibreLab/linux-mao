@@ -2,7 +2,7 @@
 # jam.sh — start/stop a jam session: a stompbox session (Carla, Hydrogen,
 # SooperLooper, patchbay) plus the JamCapture web server.
 #
-#   ./jam.sh start [session] [youtube-url]   default session: bossa
+#   ./jam.sh start [session] [youtube-url]   default session: multifx
 #   ./jam.sh stop  [session]          default: the running session(s)
 #   ./jam.sh restart [session] [youtube-url]
 #   ./jam.sh status [session]         default: the running session(s), silent if none
@@ -25,7 +25,7 @@
 
 set -euo pipefail
 
-SESSION="${JAM_SESSION:-bossa}"
+SESSION="${JAM_SESSION:-multifx}"
 SESSION_SET=0                        # 1 once a session is named explicitly
 [ -n "${JAM_SESSION:-}" ] && SESSION_SET=1
 JAM_UNIT="${JAM_UNIT:-jamcapture}"
