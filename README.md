@@ -24,6 +24,13 @@ Les deux outils lisent leur configuration dans `~/.config`
 `~/.config/jamcapture.yaml`), donc le script marche depuis n'importe où.
 
 
+# Grooves de vrais batteurs
+
+`drumgizmo/groove.py FICHIER.mid` ouvre un groove du Groove MIDI Dataset de Google
+dans Qtractor, joué par DrumGizmo (kit DRSKit). Installation et détails :
+[drumgizmo/README.md](drumgizmo/README.md).
+
+
 # Add audio user to audio group and restart the computer
 sudo adduser $USER audio
 
