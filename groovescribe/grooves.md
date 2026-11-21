@@ -27,6 +27,9 @@ Les grooves swing, la valse et le shuffle sont écrits en triolets (Div=12), don
 - [Superstition (Stevie Wonder), esprit](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=16&Title=Superstition%20%28Stevie%20Wonder%29%2C%20esprit&Tempo=100&Measures=1&H=|xxxxxxxxxxxxxxox|&S=|----O-------O---|&K=|o--o--o---o-----|) : 100 bpm
 - [Chameleon (Herbie Hancock), esprit](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=16&Title=Chameleon%20%28Herbie%20Hancock%29%2C%20esprit&Tempo=95&Measures=1&H=|x-x-x-x-x-x-x-x-|&S=|----O--g----O---|&K=|o--o--o-o-------|) : 95 bpm
 - [Rosanna (Toto), half-time shuffle simplifié](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=12&Title=Rosanna%20%28Toto%29%2C%20half-time%20shuffle%20simplifi%C3%A9&Tempo=86&Measures=1&H=|x-xx-xx-xx-x|&S=|-g--g-Og--g-|&K=|o-------o--o|) : 86 bpm
+- [Virtual Insanity (Jamiroquai), esprit](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=16&Title=Virtual%20Insanity%20%28Jamiroquai%29%2C%20esprit&Tempo=92&Measures=1&H=|x-x-x-o-x-x-x-o-|&S=|----O-------O---|&K=|o--o----o-o-----|) : 92 bpm
+- [Use Me (Bill Withers), esprit](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=16&Title=Use%20Me%20%28Bill%20Withers%29%2C%20esprit&Tempo=76&Measures=1&H=|xxxxxxxxxxxxxxxx|&S=|----O--g----O-g-|&K=|o-o-----o-o-----|) : 76 bpm
+- [Just the Two of Us (Grover Washington Jr.), esprit](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=16&Title=Just%20the%20Two%20of%20Us%20%28Grover%20Washington%20Jr.%29%2C%20esprit&Tempo=96&Measures=1&H=|x-x-x-x-x-x-x-x-|&S=|----O-------O---|&K=|o------o--o-----|) : 96 bpm
 
 ## Morceaux : jazz
 
