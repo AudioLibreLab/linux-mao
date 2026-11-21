@@ -34,7 +34,7 @@ Les grooves swing, la valse et le shuffle sont écrits en triolets (Div=12), don
 ## Morceaux : jazz
 
 - [So What (Miles Davis), swing medium](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=12&Title=So%20What%20%28Miles%20Davis%29%2C%20swing%20medium&Tempo=136&Measures=2&H=|r--r-rr--r-r|r--r-rr--r-r|&S=|-----------g|-----o--o---|&K=|---x-----x--|---x-----x--|) : 136 bpm
-- [Autumn Leaves, swing en 2](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=12&Title=Autumn%20Leaves%2C%20swing%20en%202&Tempo=120&Measures=1&H=|r--r-rr--r-r|&K=|o--x--o--x--|) : 120 bpm
+- [Autumn Leaves, swing medium, cross-stick sur 4](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=12&Title=Autumn%20Leaves%2C%20swing%20medium%2C%20cross-stick%20sur%204&Tempo=120&Measures=1&H=|r--r-rr--r-r|&S=|---------x--|&K=|---x-----x--|) : 120 bpm
 - [Blue Bossa, bossa ride + clave 2-3](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=8&Title=Blue%20Bossa%2C%20bossa%20ride%20%2B%20clave%202-3&Tempo=140&Measures=2&H=|rrrrrrrr|rrrrrrrr|&S=|--x--x--|x--x--x-|&K=|o--oo--o|o--oo--o|) : 140 bpm
 - [Take Five (Dave Brubeck), 5/4 simplifié](https://www.mikeslessons.com/groove/?TimeSig=5/4&Div=12&Title=Take%20Five%20%28Dave%20Brubeck%29%2C%205/4%20simplifi%C3%A9&Tempo=172&Measures=1&H=|r--r-rr--r-rr--|&S=|------o-----o--|&K=|---x-----x-----|) : 172 bpm
 - [Cantaloupe Island (Herbie Hancock), funk-jazz en croches](https://www.mikeslessons.com/groove/?TimeSig=4/4&Div=8&Title=Cantaloupe%20Island%20%28Herbie%20Hancock%29%2C%20funk-jazz%20en%20croches&Tempo=112&Measures=1&H=|xxxxxxxx|&S=|--O---O-|&K=|o-oo--o-|) : 112 bpm
